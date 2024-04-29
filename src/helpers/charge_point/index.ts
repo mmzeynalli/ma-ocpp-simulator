@@ -38,6 +38,9 @@ class _AppChargePoint {
       data: {},
     });
     const settings = AppSocket.getSettings();
+    for (let i = 0; i < this.connectors.length; i++) {
+      delete this.connectors[i];
+    }
     this.connectors = [];
     for (let i = 0; i < Math.max(1, settings.configurationKeys.numberOfConnectors); i++) this.connectors.push(new AppChargePointConnector({ connectorNumber: i + 1 }));
     if (this.heartbeatWorker) clearInterval(this.heartbeatWorker);
