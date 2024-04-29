@@ -44,7 +44,7 @@ const _startTransactionCallback = (connectorId: number, idTag: any, socketData: 
     const oldConnectorStatus = store.connectorStatus.data?.[connectorId];
     const connector = AppChargePoint.getConnector(connectorId)!;
     if (!oldConnectorStatus) return;
-    AppChargePoint.connectors.find((e) => e.getNumber() === 1)?.setStatus({ ...oldConnectorStatus!, ocppStatus: OCPPConnectorStatus.charging });
+    connector?.setStatus({ ...oldConnectorStatus!, ocppStatus: OCPPConnectorStatus.charging });
     ReduxStore.dispatch({
       type: ReduxSymbols.transactions.call,
       data: [
