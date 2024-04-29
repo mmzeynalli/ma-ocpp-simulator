@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { marked } from 'marked';
 import AppContent from '../../components/content';
 
 const HomeScreen: React.FC<any> = () => {
@@ -9,7 +11,7 @@ const HomeScreen: React.FC<any> = () => {
   }, []);
   const getReadmeContent = async () => {
     const response = await fetch('https://raw.githubusercontent.com/MuhammedAlmaz/ma-ocpp-simulator/main/README.md');
-    setReadme(await response.text());
+    setReadme(marked(await response.text()) as string);
   };
   return (
     <AppContent title="Home">
