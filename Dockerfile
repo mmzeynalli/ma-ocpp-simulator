@@ -1,10 +1,9 @@
-# Stage 1: Compile and Build angular codebase
 FROM node:20.4 as build
 WORKDIR /app
 RUN apt-get update && apt-get install -y git
 
-COPY . /app 
-RUN npm install 
+COPY . /app
+RUN npm install
 RUN npm run build
 
 FROM nginx:alpine
