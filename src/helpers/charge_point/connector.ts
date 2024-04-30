@@ -120,7 +120,7 @@ export default class AppChargePointConnector {
     AppSocket.addSocketEventCallback(socketPayload[1], () => {
       const newTransactions = store.transactions.data?.filter((e) => parseInt(e.transactionId) !== parseInt(args?.transactionId)) ?? [];
       ReduxStore.dispatch({ type: ReduxSymbols.transactions.call, data: newTransactions });
-      this.setStatus({ ...connectorStatus!, ocppStatus: OCPPConnectorStatus.finishing });
+      this.setStatus({ ...connectorStatus!, ocppStatus: args.reason !== OCPPStopReason.remote ? OCPPConnectorStatus.available : OCPPConnectorStatus.finishing });
     });
     AppSocket.sendPayload(socketPayload);
   };
