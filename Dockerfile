@@ -3,7 +3,7 @@ FROM node:20.4 as build
 WORKDIR /app
 RUN apt-get update && apt-get install -y git
 
-COPY . . 
+COPY . /app 
 RUN npm install 
 RUN npm run build
 
