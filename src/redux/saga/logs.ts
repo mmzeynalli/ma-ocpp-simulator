@@ -9,6 +9,7 @@ function* _func(callObject: any) {
   let logs: IRLog[] = yield select((state: any) => state.logs.data ?? []);
   logs = _.cloneDeep(logs);
   const now = moment();
+  logs = logs.slice(0, 1000);
   logs.unshift({ createdAt: now, ...callObject.data, uniqueId: `${now.unix()}-${AppHelper.generateUniqueId()}` });
   yield put({ type: ReduxSymbols.logs.success, data: logs });
 }

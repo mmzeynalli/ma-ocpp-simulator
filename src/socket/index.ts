@@ -9,6 +9,7 @@ import OCPPMessageType from '../constants/ocpp/message_types';
 import OCPPConnectorStatus from '../constants/ocpp/connector_statuses';
 import OCPPConnectorAvailabilityType from '../constants/ocpp/connector_availability_type';
 import LocalStorage from '../helpers/local_storage';
+import OCPPStopReason from '../constants/ocpp/stop_reasons';
 
 export type OutgoingWebSocketPayload = [OCPPMessageType, string, OCPPEvent, any] | [OCPPMessageType, string, any];
 class _AppSocket {
@@ -95,6 +96,7 @@ class _AppSocket {
     newSettings = { ...newSettings, configurationKeys: { ...newSettings.configurationKeys, [payload.key]: payload.value as any } };
     LocalStorage.setSettings(newSettings);
     this.sendPayload([OCPPMessageType.callResultMessage, uniqueId, { status: 'Accepted' }]);
+    AppChargePoint.generateCP();
   };
 
   private changeAvailability = (args: { uniqueId: any; payload: any }) => {
@@ -127,16 +129,13 @@ class _AppSocket {
     const { payload, uniqueId } = args;
     const store = _.cloneDeep(ReduxStore.getState());
     const stoppingTransaction = store.transactions.data?.find((e) => e.transactionId === payload?.transactionId);
-    if (stoppingTransaction) {
-      const newTransactions = store.transactions.data?.filter((e) => e.transactionId === payload?.transactionId) ?? [];
-      ReduxStore.dispatch({ type: ReduxSymbols.transactions.call, data: newTransactions });
-    } else {
+    if (!stoppingTransaction) {
       return this.sendPayload([OCPPMessageType.callResultMessage, uniqueId, { status: 'Rejected' }]);
     }
     const connector = AppChargePoint.getConnector(stoppingTransaction?.connectorId);
     if (!connector) return this.sendPayload([OCPPMessageType.callResultMessage, uniqueId, { status: 'Rejected' }]);
     this.sendPayload([OCPPMessageType.callResultMessage, uniqueId, { status: 'Accepted' }]);
-    connector.stopTransaction({ transactionId: payload?.transactionId });
+    connector.stopTransaction({ transactionId: payload?.transactionId, reason: OCPPStopReason.remote });
   };
 
   private unlockConnector = (args: { uniqueId: any; payload: any }) => {
