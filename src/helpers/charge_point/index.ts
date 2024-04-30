@@ -12,9 +12,9 @@ import AppChargePointConnector from './connector';
 setInterval(() => {
   const settings = LocalStorage.getSettings();
   const maximumWatt = (settings?.maximumKw ?? 11) * 1000;
-  const currentWatt = Math.min(maximumWatt, AppHelper.random(maximumWatt * 0.95, maximumWatt * 1.1));
+  const currentWatt = Math.min(maximumWatt, AppHelper.random(maximumWatt * 0.985, maximumWatt * 1.1));
   AppChargePoint.currentPowerWatt = currentWatt;
-}, 100);
+}, 400);
 setInterval(() => {
   // Kw
   const totalEnergy = (AppChargePoint.currentPowerWatt / 1000) * (1 / 60);
@@ -32,13 +32,14 @@ class _AppChargePoint {
   meterValueWorker: NodeJS.Timer | undefined = undefined;
   currentPowerWatt = 0;
 
-  private generateCP = () => {
+  generateCP = () => {
     ReduxStore.dispatch({
       type: ReduxSymbols.connectorsStatus.success,
       data: {},
     });
     const settings = AppSocket.getSettings();
     for (let i = 0; i < this.connectors.length; i++) {
+      this.connectors[i].stopSendMeterValues();
       delete this.connectors[i];
     }
     this.connectors = [];
@@ -82,8 +83,8 @@ class _AppChargePoint {
       const heartbeatInterval = payload.interval;
       settings = AppSocket.getSettings();
       ReduxStore.dispatch({ type: ReduxSymbols.settings.call, data: { ...settings, heartbeatInterval: parseInt(heartbeatInterval) }, disableReconnectSocket: true });
-      this.sendStatusNotificationsOfConnectors();
       this.generateCP();
+      this.sendStatusNotificationsOfConnectors();
       ReduxStore.dispatch({ type: ReduxSymbols.logs.call, data: { information: 'BootNotification Accepted', data: socketData } });
     });
     AppSocket.sendPayload(sendPayload);

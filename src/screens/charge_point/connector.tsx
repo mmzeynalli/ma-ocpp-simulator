@@ -14,6 +14,8 @@ import ReduxStore from '../../redux';
 import { IReduxState } from '../../helpers/redux';
 import OCPPEvent from '../../constants/ocpp/events';
 import AppMessage from '../../helpers/message';
+import { IRTransaction } from '../../redux/reducer/transactions';
+import OCPPStopReason from '../../constants/ocpp/stop_reasons';
 
 interface IChargePointScreenConnector {
   connectorNumber: number;
@@ -21,6 +23,7 @@ interface IChargePointScreenConnector {
 type ConnectorSwitchKeys = 'isConnectorReady' | 'isCarReady' | 'isChargingSocketPlugged';
 const ChargePointScreenConnector: React.FC<IChargePointScreenConnector> = (props) => {
   const connectorStatuses: IReduxState<IRConnectorStatuses> = useSelector((state: any) => state.connectorStatus);
+  const transactions: IReduxState<IRTransaction[]> = useSelector((state: any) => state.transactions);
   const connectorStatus = connectorStatuses.data![props.connectorNumber]!;
   const localizationPrefix = 'chargePoint.connector';
   const [changingKey, setChangingKey] = useState<ConnectorSwitchKeys | undefined>(undefined);
@@ -51,6 +54,10 @@ const ChargePointScreenConnector: React.FC<IChargePointScreenConnector> = (props
       newStatus = { ...newStatus, ocppStatus: OCPPConnectorStatus.available };
     } else {
       newStatus = { ...newStatus, ocppStatus: OCPPConnectorStatus.unavailable };
+    }
+    if (connectorStatus.ocppStatus === OCPPConnectorStatus.charging) {
+      const currentTransaction = transactions?.data?.find((e) => e.connectorId === props.connectorNumber);
+      if (currentTransaction) connector?.stopTransaction({ transactionId: currentTransaction!.transactionId, reason: OCPPStopReason.evDisconnected });
     }
     await connector?.setStatus(newStatus);
     setChangingKey(undefined);

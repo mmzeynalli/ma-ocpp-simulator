@@ -1,5 +1,6 @@
 import createSagaMiddleware, { Task } from 'redux-saga';
 import { createStore, applyMiddleware } from 'redux';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { logger } from 'redux-logger';
 import { all } from 'redux-saga/effects';
 import rootReducer from './reducer';
@@ -9,7 +10,9 @@ function* _rootSaga() {
   yield all(rootSaga);
 }
 const sagaMiddleware = createSagaMiddleware();
-const ReduxStore = createStore(rootReducer, applyMiddleware(sagaMiddleware, logger));
+const middlewares = [sagaMiddleware];
+// middlewares.push(logger);
+const ReduxStore = createStore(rootReducer, applyMiddleware(...middlewares));
 
 const rootSagaTask: Task = sagaMiddleware.run(_rootSaga);
 rootSagaTask.toPromise().catch((error) => {

@@ -11,7 +11,7 @@ import OCPPMessageType from '../../constants/ocpp/message_types';
 import AppHelper from '../app';
 import OCPPEvent from '../../constants/ocpp/events';
 import OCPPConnectorAvailabilityType from '../../constants/ocpp/connector_availability_type';
-import AppChargePoint from '.';
+import OCPPStopReason from '../../constants/ocpp/stop_reasons';
 
 const defaultStatus: IRConnectorStatus = {
   isChargingSocketPlugged: false,
@@ -30,6 +30,8 @@ export default class AppChargePointConnector {
   private connectorNumber: number;
   isPluggedCar = false;
   currentEnergyWatt = 0;
+  currentPower = 0;
+  private stopMeterValues = false;
 
   constructor(args: { connectorNumber: number }) {
     this.connectorNumber = args.connectorNumber;
@@ -41,8 +43,10 @@ export default class AppChargePointConnector {
     const store = _.cloneDeep(ReduxStore.getState());
     return store.connectorStatus.data!;
   };
+  public stopSendMeterValues = () => (this.stopMeterValues = true);
   private startSendMeterValues = async () => {
     while (true) {
+      if (this.stopMeterValues) return console.log(this.connectorNumber, 'STOP METER VALUES TRUE');
       const settings = LocalStorage.getSettings();
       if (this.getOCPPStatus() !== OCPPConnectorStatus.charging || !settings) {
         await AppHelper.sleep(100);
@@ -72,7 +76,7 @@ export default class AppChargePointConnector {
               },
               {
                 unit: 'W',
-                value: AppChargePoint.currentPowerWatt,
+                value: this.currentPower,
                 location: 'Outlet',
                 measurand: 'Power.Active.Import',
               },
@@ -100,7 +104,7 @@ export default class AppChargePointConnector {
     }
   };
 
-  stopTransaction = (args: { transactionId: string }) => {
+  stopTransaction = (args: { transactionId: string; reason: OCPPStopReason }) => {
     const connectorStatus = this.getStatus();
     const store = _.cloneDeep(ReduxStore.getState());
     const stoppingTransaction = store.transactions.data?.find((e) => parseInt(e.transactionId) === parseInt(args?.transactionId));
@@ -110,10 +114,12 @@ export default class AppChargePointConnector {
       connectorId: stoppingTransaction?.connectorId,
       timestamp: moment().utc().toISOString(),
       transactionId: stoppingTransaction?.transactionId,
-      reason: 'Remote',
+      reason: args.reason,
     };
     const socketPayload: OutgoingWebSocketPayload = [OCPPMessageType.callMessage, AppHelper.generateUniqueId(), OCPPEvent.stopTransaction, payload];
     AppSocket.addSocketEventCallback(socketPayload[1], () => {
+      const newTransactions = store.transactions.data?.filter((e) => parseInt(e.transactionId) !== parseInt(args?.transactionId)) ?? [];
+      ReduxStore.dispatch({ type: ReduxSymbols.transactions.call, data: newTransactions });
       this.setStatus({ ...connectorStatus!, ocppStatus: OCPPConnectorStatus.finishing });
     });
     AppSocket.sendPayload(socketPayload);
@@ -126,6 +132,7 @@ export default class AppChargePointConnector {
   };
   getOCPPStatus = (): OCPPConnectorStatus => this.getStatus().ocppStatus;
   addEnergy = (energyWatt: number) => {
+    this.currentPower = 1000 * 60 * energyWatt;
     this.currentEnergyWatt += energyWatt;
     localStorage.setItem(`CONNECTOR-${this.connectorNumber}-Energy`, `${this.currentEnergyWatt}`);
 
@@ -141,7 +148,7 @@ export default class AppChargePointConnector {
       const reduxStore = _.cloneDeep(ReduxStore.getState());
       const currentTransaction = reduxStore.transactions.data?.find((e) => e.connectorId === this.connectorNumber);
       if (currentTransaction) {
-        this.stopTransaction({ transactionId: currentTransaction?.transactionId });
+        this.stopTransaction({ transactionId: currentTransaction?.transactionId, reason: OCPPStopReason.local });
         return;
       }
     }
@@ -152,7 +159,10 @@ export default class AppChargePointConnector {
   setStatus = (status: IRConnectorStatus): Promise<null> => {
     const newStatus = _.cloneDeep(status);
     return new Promise((resolve) => {
-      const reduxConnectorStatuses = this.getReduxConnectorStatuses();
+      const reduxStore = _.cloneDeep(ReduxStore.getState());
+      const reduxConnectorStatuses = reduxStore.connectorStatus.data!;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const currentStatus = reduxConnectorStatuses[this.connectorNumber];
 
       if (newStatus.availabilityType === OCPPConnectorAvailabilityType.inoperative && newStatus.ocppStatus === OCPPConnectorStatus.available) {
         //  Change avaibility status ..
@@ -170,16 +180,17 @@ export default class AppChargePointConnector {
         OCPPEvent.statusNotification,
         { connectorId: this.connectorNumber, errorCode: 'NoError', status: newStatus.ocppStatus },
       ];
-      if (newStatus.ocppStatus !== OCPPConnectorStatus.charging) {
-        // clear transactions
-        const store = _.cloneDeep(ReduxStore.getState());
-        const oldTransactions = store.transactions?.data ?? [];
-        ReduxStore.dispatch({ type: ReduxSymbols.transactions.call, data: oldTransactions.filter((e) => e.connectorId !== this.connectorNumber) });
-      }
+      // if (newStatus.ocppStatus !== OCPPConnectorStatus.charging) {
+      //   // clear transactions
+      //   const store = _.cloneDeep(ReduxStore.getState());
+      //   const oldTransactions = store.transactions?.data ?? [];
+      //   ReduxStore.dispatch({ type: ReduxSymbols.transactions.call, data: oldTransactions.filter((e) => e.connectorId !== this.connectorNumber) });
+      // }
       AppSocket.addSocketEventCallback(payload[1], () => {
         const newStatuses = { ...reduxConnectorStatuses, [this.connectorNumber]: newStatus };
         ReduxStore.dispatch({ type: ReduxSymbols.connectorsStatus.success, data: newStatuses });
         LocalStorage.setConnectorStatuses(newStatuses);
+
         resolve(null);
       });
       AppSocket.sendPayload(payload);
