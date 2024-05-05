@@ -70,25 +70,25 @@ export default class AppChargePointConnector {
             sampledValue: [
               {
                 unit: 'Wh',
-                value: this.currentEnergyWatt,
+                value: this.currentEnergyWatt.toString(),
                 location: 'Outlet',
                 measurand: 'Energy.Active.Import.Register',
               },
               {
                 unit: 'W',
-                value: this.currentPower,
+                value: this.currentPower.toString(),
                 location: 'Outlet',
                 measurand: 'Power.Active.Import',
               },
               {
                 unit: 'W',
-                value: settings.maximumKw * 1000,
+                value: (settings.maximumKw * 1000).toString(),
                 location: 'Outlet',
                 measurand: 'Power.Offered',
               },
               {
                 unit: 'Percent',
-                value: connectorStatuses[this.connectorNumber].car.currentBatteryPercent ?? 0,
+                value: (connectorStatuses[this.connectorNumber].car.currentBatteryPercent ?? 0).toString(),
                 location: 'EV',
                 measurand: 'SoC',
               },
@@ -111,7 +111,7 @@ export default class AppChargePointConnector {
     const payload = {
       idTag: stoppingTransaction?.idTag,
       meterStop: Math.floor(this.currentEnergyWatt),
-      connectorId: stoppingTransaction?.connectorId,
+      // connectorId: stoppingTransaction?.connectorId,
       timestamp: moment().utc().toISOString(),
       transactionId: stoppingTransaction?.transactionId,
       reason: args.reason,
