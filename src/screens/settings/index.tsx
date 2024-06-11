@@ -31,10 +31,10 @@ const SettingsScren: React.FC<any> = () => {
                 <AppInput value={value.ocppWSUrl} requiredRule={t(`${localizationPrefix}.ocppWSUrlRule`)} onChange={(e) => setValue({ ...value, ocppWSUrl: e ?? '' })} />
               </AppFormItem>
               <AppFormItem label={t(`${localizationPrefix}.chargePointCode`)}>
-                <AppNumberInput
+                <AppInput
                   value={value.chargePointCode}
                   requiredRule={t(`${localizationPrefix}.chargePointCodeRule`)}
-                  onChange={(e) => setValue({ ...value, chargePointCode: e })}
+                  onChange={(e) => setValue({ ...value, chargePointCode: e ?? '' })}
                 />
               </AppFormItem>
               <AppFormItem label={t(`maximum kW`)}>

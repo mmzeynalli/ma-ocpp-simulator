@@ -11,7 +11,7 @@ export interface IRSettingsConfigurationKeys {
 export interface IRSettings {
   ocppWSUrl: string;
   maximumKw: number;
-  chargePointCode: number;
+  chargePointCode: string;
   chargePointVendor: string;
   chargePointModel: string;
   chargePointSerialNumber: string;
@@ -25,7 +25,7 @@ export interface IRSettings {
 }
 const defaultSettings: IRSettings = {
   maximumKw: 180,
-  chargePointCode: 1,
+  chargePointCode: '1',
   ocppWSUrl: 'ws://localhost:11111/MY-OCPP-Chargestation',
   chargePointVendor: 'CP-VENDOR',
   chargePointModel: 'CP-MODEL',
